@@ -18,7 +18,7 @@ const HomePage = () => {
 
   // Get pagination params from URL or use defaults
   const pageNumber = parseInt(searchParams.get("page") || "1");
-  const pageSize = parseInt(searchParams.get("limit") || "1");
+  const pageSize = parseInt(searchParams.get("limit") || "20");
 
   // Fetch data with pagination
   const { data, isLoading } = useGetDauData(pageNumber, pageSize);
