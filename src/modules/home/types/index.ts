@@ -26,3 +26,10 @@ export interface ParamsType {
     page: number,
     search: string,
 }
+
+export interface MrrItem {
+  totalAmount: number;
+  totalCount: number;
+  PAYME: { amount: number; count: number }[];
+  CLICK: { amount: number; count: number }[];
+}

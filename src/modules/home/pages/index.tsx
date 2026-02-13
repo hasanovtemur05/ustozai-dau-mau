@@ -1,114 +1,431 @@
-import { useNavigate, useSearchParams } from "react-router-dom";
-import GlobalTable from "../../../components/table/DataTable";
-import type { ColumnsType } from "antd/es/table";
-import { Loading } from "../../../components";
-import { useGetDauData } from "../hooks/queries"; // adjust import path as needed
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useState, useMemo } from "react";
+import dayjs, { Dayjs } from "dayjs";
+import { subMonths } from "date-fns";
+import { DatePicker } from "antd";
 
-// Data type based on your API response
-type UserDataType = {
-  id: string;
-  firstname: string;
-  lastname: string;
-  streakCount: number;
-};
+import {
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+  Legend,
+  BarChart,
+  AreaChart,
+  Area,
+  Line,
+} from "recharts";
+
+import GlobalTable from "../../../components/table/DataTable";
+import { columns } from "./columns";
+import { Loading } from "../../../components";
+import {
+  useGetDauData,
+  useGetDauGeneralStats,
+  useGetMrr,
+} from "../hooks/queries";
 
 const HomePage = () => {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [tablePage, setTablePage] = useState(1);
+  const [tableLimit, setTableLimit] = useState(20);
 
-  // Get pagination params from URL or use defaults
-  const pageNumber = parseInt(searchParams.get("page") || "1");
-  const pageSize = parseInt(searchParams.get("limit") || "20");
+  // ===================== SORT STATE (optional) =====================
+  const [sortBy, setSortBy] = useState<'streakCount' | 'launchCount'>('streakCount');
+  const [order, setOrder] = useState<'asc' | 'desc'>('desc');
 
-  // Fetch data with pagination
-  const { data, isLoading } = useGetDauData(pageNumber, pageSize);
+  // ===================== DATE FILTERS =====================
+  const [dauStart, setDauStart] = useState<Dayjs | null>(dayjs(subMonths(new Date(), 1)));
+  const [dauEnd, setDauEnd] = useState<Dayjs | null>(dayjs());
 
-  const handleTableChange = (pagination: {
-    current?: number;
-    pageSize?: number;
-  }) => {
-    const { current = 1, pageSize: newPageSize = 1 } = pagination;
-    const params = new URLSearchParams();
-    params.set("page", `${current}`);
-    params.set("limit", `${newPageSize}`);
-    navigate(`?${params.toString()}`);
-  };
+  const [mauStart, setMauStart] = useState<Dayjs | null>(dayjs(subMonths(new Date(), 1)));
+  const [mauEnd, setMauEnd] = useState<Dayjs | null>(dayjs());
 
-  if (isLoading) return <Loading />;
+  const [mrrStart, setMrrStart] = useState<Dayjs | null>(dayjs(subMonths(new Date(), 1)));
+  const [mrrEnd, setMrrEnd] = useState<Dayjs | null>(dayjs());
 
-  const columns: ColumnsType<UserDataType> = [
-    {
-      title: "T/R",
-      dataIndex: "index",
-      render: (_text, _record, index) =>
-        index + 1 + (pageNumber - 1) * pageSize,
-    },
-    {
-      title: "First Name",
-      dataIndex: "firstname",
-    },
-    {
-      title: "Last Name",
-      dataIndex: "lastname",
-    },
-    {
-      title: "Streak Count",
-      dataIndex: "streakCount",
-      render: (count: number) => (
-        <span style={{ fontWeight: 'bold', color: count > 0 ? '#52c41a' : '#8c8c8c' }}>
-          {count}
-        </span>
-      ),
-    },
-  ];
+  // ===================== API CALLS =====================
 
-  const tableData = data?.data?.data || [];
-  const pagination = data?.data?.meta?.pagination || {};
+  const { data: tableResponse, isLoading: tableLoading } = useGetDauData(
+    tablePage,
+    tableLimit,
+    sortBy,
+    order
+  );
+
+
+  const { data: dauStatsData, isLoading: dauLoading } = useGetDauGeneralStats(
+    dauStart?.format("YYYY-MM-DD") || "",
+    dauEnd?.format("YYYY-MM-DD") || ""
+  );
+
+  const { data: mauStatsData, isLoading: mauLoading } = useGetDauGeneralStats(
+    mauStart?.format("YYYY-MM-DD") || "",
+    mauEnd?.format("YYYY-MM-DD") || ""
+  );
+
+  const { data: mrrData, isLoading: mrrLoading } = useGetMrr(
+    mrrStart?.format("YYYY-MM-DD") || "",
+    mrrEnd?.format("YYYY-MM-DD") || ""
+  );
+
+  // ===================== TABLE =====================
+  const tableData = tableResponse?.data?.data || [];
+  const pagination = tableResponse?.data?.meta?.pagination || {};
+
+  // ===================== CHART DATA =====================
+  const dauChartData = dauStatsData?.data?.data?.dauStats || [];
+  const mauChartData = mauStatsData?.data?.data?.mauStats || [];
+
+  // Transform MRR data for chart
+  const mrrChartData = useMemo(() => {
+    if (!mrrData) return [];
+    return Object.entries(mrrData).map(([date, value]: any) => ({
+      date,
+      totalAmount: value.totalAmount,
+      totalCount: value.totalCount,
+      paymeAmount: value.PAYME?.reduce((sum: number, item: { amount: number; count: number }) => sum + item.amount, 0) || 0,
+      clickAmount: value.CLICK?.reduce((sum: number, item: { amount: number; count: number }) => sum + item.amount, 0) || 0,
+
+    }));
+  }, [mrrData]);
 
   return (
-    <div className="p-[50px]">
-      <div className="mb-4 flex items-center justify-between  p-4 ">
-        <h1 className="text-2xl font-bold text-gray-800">
-          Kunlik Faol Foydalanuvchilar (DAU)
-        </h1>
-
-        <div className="flex items-center gap-8 text-lg">
-          <div className="font-semibold text-gray-700">
-            DAU:
-            <span className="ml-2 font-bold text-black">
-              {pagination.count || 0}
-            </span>
+    <div className="p-10 space-y-10 bg-gray-50 min-h-screen">
+      {/* ===================== DATE FILTERS ===================== */}
+      <div className="bg-white p-6 rounded-xl shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* DAU Filter */}
+          <div className="flex flex-col gap-2">
+            <span className="font-semibold text-gray-700">DAU Filter</span>
+            <div className="flex gap-2">
+              <DatePicker
+                value={dauStart}
+                onChange={setDauStart}
+                placeholder="Start Date"
+                className="flex-1"
+              />
+              <DatePicker
+                value={dauEnd}
+                onChange={setDauEnd}
+                placeholder="End Date"
+                className="flex-1"
+              />
+            </div>
           </div>
 
-          <div className="font-semibold text-gray-700">
-            MAU:
-            <span className="ml-2 font-bold text-blue-600">
-              {data?.data?.meta?.data?.mau || 0}
-            </span>
+          {/* MAU Filter */}
+          <div className="flex flex-col gap-2">
+            <span className="font-semibold text-gray-700">MAU Filter</span>
+            <div className="flex gap-2">
+              <DatePicker
+                value={mauStart}
+                onChange={setMauStart}
+                placeholder="Start Date"
+                className="flex-1"
+              />
+              <DatePicker
+                value={mauEnd}
+                onChange={setMauEnd}
+                placeholder="End Date"
+                className="flex-1"
+              />
+            </div>
           </div>
 
-          <div className="font-semibold text-gray-700">
-            MRR:
-            <span className="ml-2 font-bold text-green-600">
-              {data?.data?.meta?.data?.mrr || 0}
-            </span>
+          {/* MRR Filter */}
+          <div className="flex flex-col gap-2">
+            <span className="font-semibold text-gray-700">MRR Filter</span>
+            <div className="flex gap-2">
+              <DatePicker
+                value={mrrStart}
+                onChange={setMrrStart}
+                placeholder="Start Date"
+                className="flex-1"
+              />
+              <DatePicker
+                value={mrrEnd}
+                onChange={setMrrEnd}
+                placeholder="End Date"
+                className="flex-1"
+              />
+            </div>
           </div>
         </div>
       </div>
 
+      {/* ===================== CHART SECTION ===================== */}
+      <div className="flex flex-col gap-6">
+        {/* DAU + MAU */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* DAU Chart */}
+          <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow">
+            <h3 className="text-lg font-semibold mb-4 text-gray-700 border-b pb-2">
+              Daily Active Users (DAU)
+            </h3>
+            {dauLoading ? (
+              <div className="h-[400px] flex items-center justify-center">
+                <Loading />
+              </div>
+            ) : dauChartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart
+                  data={dauChartData}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis
+                    dataKey="label"
+                    tickFormatter={(date) => dayjs(date).format("MMM D")}
+                    angle={-45}
+                    textAnchor="end"
+                    height={70}
+                    tick={{ fontSize: 12, fill: '#6b7280' }}
+                  />
+                  <YAxis tick={{ fontSize: 12, fill: '#6b7280' }} />
+                  <Tooltip
+                    formatter={(
+                      value: number | undefined,
+                    ): [string, string] => [
+                        value !== undefined ? new Intl.NumberFormat("uz-UZ").format(value) : "-",
+                        "Foydalanuvchilar"
+                      ]}
 
-      <GlobalTable
-        columns={columns}
-        data={tableData}
-        pagination={{
-          current: pagination.pageNumber || 1,
-          pageSize: pagination.pageSize || 1,
-          total: pagination.count || 0,
-          showSizeChanger: true,
-          pageSizeOptions: ["5", "10", "20", "30", "50"],
-        }}
-        onChange={handleTableChange}
-      />
+                    contentStyle={{
+                      backgroundColor: '#fff',
+                      borderRadius: '8px',
+                      border: '1px solid #e5e7eb',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                    }}
+                  />
+                  <Legend
+                    verticalAlign="top"
+                    height={36}
+                    wrapperStyle={{ paddingBottom: '10px' }}
+                  />
+                  <Bar
+                    dataKey="count"
+                    fill="#22c55e"
+                    name="DAU"
+                    radius={[8, 8, 0, 0]}
+                    animationDuration={800}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[400px] flex items-center justify-center text-gray-400">
+                Ma'lumot mavjud emas
+              </div>
+            )}
+          </div>
+
+          {/* MAU Chart */}
+          <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow">
+            <h3 className="text-lg font-semibold mb-4 text-gray-700 border-b pb-2">
+              Monthly Active Users (MAU)
+            </h3>
+            {mauLoading ? (
+              <div className="h-[400px] flex items-center justify-center">
+                <Loading />
+              </div>
+            ) : mauChartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart
+                  data={mauChartData}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis
+                    dataKey="label"
+                    tickFormatter={(date) => dayjs(date).format("MMM D")}
+                    angle={-45}
+                    textAnchor="end"
+                    height={70}
+                    tick={{ fontSize: 12, fill: '#6b7280' }}
+                  />
+                  <YAxis tick={{ fontSize: 12, fill: '#6b7280' }} />
+                  <Tooltip
+                    formatter={(
+                      value: number | undefined,
+                    ): [string, string] => [
+                        value !== undefined ? new Intl.NumberFormat("uz-UZ").format(value) : "-",
+                        "Foydalanuvchilar"
+                      ]}
+
+                    contentStyle={{
+                      backgroundColor: '#fff',
+                      borderRadius: '8px',
+                      border: '1px solid #e5e7eb',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                    }}
+                  />
+                  <Legend
+                    verticalAlign="top"
+                    height={36}
+                    wrapperStyle={{ paddingBottom: '10px' }}
+                  />
+                  <Bar
+                    dataKey="count"
+                    fill="#3b82f6"
+                    name="MAU"
+                    radius={[8, 8, 0, 0]}
+                    animationDuration={800}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[400px] flex items-center justify-center text-gray-400">
+                Ma'lumot mavjud emas
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ===================== MRR Area Chart ===================== */}
+        <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow">
+          <h3 className="text-lg font-semibold mb-4 text-gray-700 border-b pb-2">
+            Monthly Recurring Revenue (MRR)
+          </h3>
+          {mrrLoading ? (
+            <div className="h-[500px] flex items-center justify-center">
+              <Loading />
+            </div>
+          ) : mrrChartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={500}>
+              <AreaChart
+                data={mrrChartData}
+                margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+              >
+                <defs>
+                  <linearGradient id="colorPayme" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="colorClick" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={(date) => dayjs(date).format("MMM D")}
+                  angle={-45}
+                  textAnchor="end"
+                  height={70}
+                  tick={{ fontSize: 12, fill: '#6b7280' }}
+                />
+                <YAxis tick={{ fontSize: 12, fill: '#6b7280' }} />
+                <Tooltip
+                  formatter={(
+                    value: number | undefined,
+                    name: string | undefined
+                  ): [string, string] => [
+                      value !== undefined ? new Intl.NumberFormat("uz-UZ").format(value) : "-",
+                      name ?? "-" // name undefined bo'lsa "-"
+                    ]}
+
+
+                  contentStyle={{
+                    backgroundColor: '#fff',
+                    borderRadius: '8px',
+                    border: '1px solid #e5e7eb',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                  }}
+                />
+                <Legend
+                  verticalAlign="top"
+                  height={36}
+                  wrapperStyle={{ paddingBottom: '10px' }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="paymeAmount"
+                  stroke="#3b82f6"
+                  fillOpacity={1}
+                  fill="url(#colorPayme)"
+                  name="PAYME"
+                  animationDuration={800}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="clickAmount"
+                  stroke="#22c55e"
+                  fillOpacity={1}
+                  fill="url(#colorClick)"
+                  name="CLICK"
+                  animationDuration={800}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="totalAmount"
+                  stroke="#f59e0b"
+                  strokeWidth={3}
+                  dot={false}
+                  name="Umumiy hisob"
+                  animationDuration={800}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[500px] flex items-center justify-center text-gray-400">
+              Ma'lumot mavjud emas
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ===================== TABLE SECTION ===================== */}
+      <div className="bg-white p-6 rounded-xl shadow-lg">
+        <div className="flex items-center justify-between mb-4 border-b pb-2">
+          <h3 className="text-lg font-semibold text-gray-700">
+            User Statistics
+          </h3>
+
+          {/* Optional: Sort controls */}
+          <div className="flex gap-2">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as 'streakCount' | 'launchCount')}
+              className="px-3 py-1 border rounded-lg text-sm"
+            >
+              <option value="streakCount">Streak Count</option>
+              <option value="launchCount">Launch Count</option>
+            </select>
+            <select
+              value={order}
+              onChange={(e) => setOrder(e.target.value as 'asc' | 'desc')}
+              className="px-3 py-1 border rounded-lg text-sm"
+            >
+              <option value="desc">Kamayish</option>
+              <option value="asc">O'sish</option>
+            </select>
+          </div>
+        </div>
+
+        {tableLoading ? (
+          <div className="h-[400px] flex items-center justify-center">
+            <Loading />
+          </div>
+        ) : (
+          <GlobalTable
+            columns={columns(tablePage, tableLimit)}
+            data={tableData}
+            pagination={{
+              current: pagination.pageNumber || 1,
+              pageSize: pagination.pageSize || 20,
+              total: pagination.count || 0,
+              showSizeChanger: true,
+              pageSizeOptions: ["5", "10", "20", "30", "50"],
+            }}
+            onChange={({ current = 1, pageSize = 20 }) => {
+              setTablePage(current);
+              setTableLimit(pageSize);
+            }}
+          />
+        )}
+      </div>
     </div>
   );
 };
