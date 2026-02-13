@@ -35,18 +35,13 @@ const HomePage = () => {
   const [sortBy, setSortBy] = useState<'streakCount' | 'launchCount'>('streakCount');
   const [order, setOrder] = useState<'asc' | 'desc'>('desc');
 
-  // ===================== DATE FILTERS =====================
-  const [dauStart, setDauStart] = useState<Dayjs | null>(dayjs(subMonths(new Date(), 1)));
-  const [dauEnd, setDauEnd] = useState<Dayjs | null>(dayjs());
-
-  const [mauStart, setMauStart] = useState<Dayjs | null>(dayjs(subMonths(new Date(), 1)));
-  const [mauEnd, setMauEnd] = useState<Dayjs | null>(dayjs());
-
-  const [mrrStart, setMrrStart] = useState<Dayjs | null>(dayjs(subMonths(new Date(), 1)));
-  const [mrrEnd, setMrrEnd] = useState<Dayjs | null>(dayjs());
+  // ===================== DATE FILTERS (Bitta umumiy filter) =====================
+  const [startDate, setStartDate] = useState<Dayjs | null>(dayjs(subMonths(new Date(), 1)));
+  const [endDate, setEndDate] = useState<Dayjs | null>(dayjs());
 
   // ===================== API CALLS =====================
 
+  // Table API
   const { data: tableResponse, isLoading: tableLoading } = useGetDauData(
     tablePage,
     tableLimit,
@@ -54,20 +49,25 @@ const HomePage = () => {
     order
   );
 
+  console.log(tableResponse, "table data");
+  
 
+  // DAU Stats - umumiy startDate va endDate ishlatadi
   const { data: dauStatsData, isLoading: dauLoading } = useGetDauGeneralStats(
-    dauStart?.format("YYYY-MM-DD") || "",
-    dauEnd?.format("YYYY-MM-DD") || ""
+    startDate?.format("YYYY-MM-DD") || "",
+    endDate?.format("YYYY-MM-DD") || ""
   );
 
+  // MAU Stats - umumiy startDate va endDate ishlatadi
   const { data: mauStatsData, isLoading: mauLoading } = useGetDauGeneralStats(
-    mauStart?.format("YYYY-MM-DD") || "",
-    mauEnd?.format("YYYY-MM-DD") || ""
+    startDate?.format("YYYY-MM-DD") || "",
+    endDate?.format("YYYY-MM-DD") || ""
   );
 
+  // MRR Stats - umumiy startDate va endDate ishlatadi
   const { data: mrrData, isLoading: mrrLoading } = useGetMrr(
-    mrrStart?.format("YYYY-MM-DD") || "",
-    mrrEnd?.format("YYYY-MM-DD") || ""
+    startDate?.format("YYYY-MM-DD") || "",
+    endDate?.format("YYYY-MM-DD") || ""
   );
 
   // ===================== TABLE =====================
@@ -87,69 +87,40 @@ const HomePage = () => {
       totalCount: value.totalCount,
       paymeAmount: value.PAYME?.reduce((sum: number, item: { amount: number; count: number }) => sum + item.amount, 0) || 0,
       clickAmount: value.CLICK?.reduce((sum: number, item: { amount: number; count: number }) => sum + item.amount, 0) || 0,
-
     }));
   }, [mrrData]);
 
   return (
-    <div className="p-10 space-y-10 bg-gray-50 min-h-screen">
-      {/* ===================== DATE FILTERS ===================== */}
+    <div className="p-10 space-y-10 bg-gray-50 min-h-screen ">
+      {/* ===================== DATE FILTERS (Bitta umumiy) ===================== */}
       <div className="bg-white p-6 rounded-xl shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* DAU Filter */}
-          <div className="flex flex-col gap-2">
-            <span className="font-semibold text-gray-700">DAU Filter</span>
-            <div className="flex gap-2">
+        <div className="grid grid-cols-2 gap-4">
+          <h3 className="text-lg font-semibold text-gray-700">
+            Umumiy Filter (DAU, MAU, MRR)
+          </h3>
+          <div className="flex gap-4 items-center justify-end ">
+            <div className="flex items-center gap-4">
+              <div className="flex gap-2 flex-1">
               <DatePicker
-                value={dauStart}
-                onChange={setDauStart}
-                placeholder="Start Date"
-                className="flex-1"
+                value={startDate}
+                onChange={setStartDate}
+                placeholder="Boshlanish sanasi"
+                format="YYYY-MM-DD"
               />
               <DatePicker
-                value={dauEnd}
-                onChange={setDauEnd}
-                placeholder="End Date"
-                className="flex-1"
-              />
-            </div>
-          </div>
-
-          {/* MAU Filter */}
-          <div className="flex flex-col gap-2">
-            <span className="font-semibold text-gray-700">MAU Filter</span>
-            <div className="flex gap-2">
-              <DatePicker
-                value={mauStart}
-                onChange={setMauStart}
-                placeholder="Start Date"
-                className="flex-1"
-              />
-              <DatePicker
-                value={mauEnd}
-                onChange={setMauEnd}
-                placeholder="End Date"
-                className="flex-1"
+                value={endDate}
+                onChange={setEndDate}
+                placeholder="Tugash sanasi"
+                format="YYYY-MM-DD"
               />
             </div>
-          </div>
-
-          {/* MRR Filter */}
-          <div className="flex flex-col gap-2">
-            <span className="font-semibold text-gray-700">MRR Filter</span>
-            <div className="flex gap-2">
-              <DatePicker
-                value={mrrStart}
-                onChange={setMrrStart}
-                placeholder="Start Date"
-                className="flex-1"
-              />
-              <DatePicker
-                value={mrrEnd}
-                onChange={setMrrEnd}
-                placeholder="End Date"
-                className="flex-1"
-              />
+            <div className="text-sm text-gray-500">
+              {startDate && endDate && (
+                <span>
+                  {dayjs(endDate).diff(dayjs(startDate), 'day')} kun
+                </span>
+              )}
+            </div>
             </div>
           </div>
         </div>
@@ -191,7 +162,6 @@ const HomePage = () => {
                         value !== undefined ? new Intl.NumberFormat("uz-UZ").format(value) : "-",
                         "Foydalanuvchilar"
                       ]}
-
                     contentStyle={{
                       backgroundColor: '#fff',
                       borderRadius: '8px',
@@ -252,7 +222,6 @@ const HomePage = () => {
                         value !== undefined ? new Intl.NumberFormat("uz-UZ").format(value) : "-",
                         "Foydalanuvchilar"
                       ]}
-
                     contentStyle={{
                       backgroundColor: '#fff',
                       borderRadius: '8px',
@@ -323,10 +292,8 @@ const HomePage = () => {
                     name: string | undefined
                   ): [string, string] => [
                       value !== undefined ? new Intl.NumberFormat("uz-UZ").format(value) : "-",
-                      name ?? "-" // name undefined bo'lsa "-"
+                      name ?? "-"
                     ]}
-
-
                   contentStyle={{
                     backgroundColor: '#fff',
                     borderRadius: '8px',
@@ -380,10 +347,10 @@ const HomePage = () => {
       <div className="bg-white p-6 rounded-xl shadow-lg">
         <div className="flex items-center justify-between mb-4 border-b pb-2">
           <h3 className="text-lg font-semibold text-gray-700">
-            User Statistics
+            Foydalanuvchi Statistikasi
           </h3>
 
-          {/* Optional: Sort controls */}
+          {/* Sort controls */}
           <div className="flex gap-2">
             <select
               value={sortBy}

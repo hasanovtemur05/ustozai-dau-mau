@@ -6,6 +6,8 @@ type UserDataType = {
   firstname: string;
   lastname: string;
   streakCount: number;
+  referralCount: number;
+  // lunchCount: number
 };
 
 export const columns = (pageNumber: number, pageSize: number): ColumnsType<UserDataType> => [
@@ -14,8 +16,8 @@ export const columns = (pageNumber: number, pageSize: number): ColumnsType<UserD
     dataIndex: "index",
     render: (_text, _record, index) => index + 1 + (pageNumber - 1) * pageSize,
   },
-  { title: "First Name", dataIndex: "firstname" },
-  { title: "Last Name", dataIndex: "lastname" },
+  { title: "Familiya", dataIndex: "firstname" },
+  { title: "Isim", dataIndex: "lastname" },
   {
     title: "Streak Count",
     dataIndex: "streakCount",
@@ -23,4 +25,12 @@ export const columns = (pageNumber: number, pageSize: number): ColumnsType<UserD
       <span style={{ fontWeight: 'bold', color: count > 0 ? '#52c41a' : '#8c8c8c' }}>{count}</span>
     ),
   },
+   {
+    title: "Murojatlar Soni",
+    dataIndex: "referralCount",
+    render: (count: number) => (
+      <span style={{ fontWeight: 'bold', color: count > 0 ? '#52c41a' : '#8c8c8c' }}>{count}</span>
+    ),
+  },
+  
 ];
