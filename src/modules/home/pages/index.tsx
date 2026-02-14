@@ -50,7 +50,7 @@ const HomePage = () => {
   );
 
   console.log(tableResponse, "table data");
-  
+
 
   // DAU Stats - umumiy startDate va endDate ishlatadi
   const { data: dauStatsData, isLoading: dauLoading } = useGetDauGeneralStats(
@@ -80,15 +80,34 @@ const HomePage = () => {
 
   // Transform MRR data for chart
   const mrrChartData = useMemo(() => {
-    if (!mrrData) return [];
-    return Object.entries(mrrData).map(([date, value]: any) => ({
-      date,
-      totalAmount: value.totalAmount,
-      totalCount: value.totalCount,
-      paymeAmount: value.PAYME?.reduce((sum: number, item: { amount: number; count: number }) => sum + item.amount, 0) || 0,
-      clickAmount: value.CLICK?.reduce((sum: number, item: { amount: number; count: number }) => sum + item.amount, 0) || 0,
-    }));
-  }, [mrrData]);
+  if (!mrrData) return [];
+
+  return Object.entries(mrrData).map(([date, value]: any) => ({
+    date,
+
+    totalAmount:
+      value?.totalAmount
+        ? value.totalAmount / 100
+        : 0,
+
+    totalCount: value?.totalCount || 0,
+
+    paymeAmount:
+      value?.PAYME?.reduce(
+        (sum: number, item: { amount: number; count: number }) =>
+          sum + (item.amount * item.count) / 100,
+        0
+      ) || 0,
+
+    clickAmount:
+      value?.CLICK?.reduce(
+        (sum: number, item: { amount: number; count: number }) =>
+          sum + (item.amount * item.count) / 100,
+        0
+      ) || 0,
+  }));
+}, [mrrData]);
+
 
   return (
     <div className="p-10 space-y-10 bg-gray-50 min-h-screen ">
@@ -101,26 +120,26 @@ const HomePage = () => {
           <div className="flex gap-4 items-center justify-end ">
             <div className="flex items-center gap-4">
               <div className="flex gap-2 flex-1">
-              <DatePicker
-                value={startDate}
-                onChange={setStartDate}
-                placeholder="Boshlanish sanasi"
-                format="YYYY-MM-DD"
-              />
-              <DatePicker
-                value={endDate}
-                onChange={setEndDate}
-                placeholder="Tugash sanasi"
-                format="YYYY-MM-DD"
-              />
-            </div>
-            <div className="text-sm text-gray-500">
-              {startDate && endDate && (
-                <span>
-                  {dayjs(endDate).diff(dayjs(startDate), 'day')} kun
-                </span>
-              )}
-            </div>
+                <DatePicker
+                  value={startDate}
+                  onChange={setStartDate}
+                  placeholder="Boshlanish sanasi"
+                  format="YYYY-MM-DD"
+                />
+                <DatePicker
+                  value={endDate}
+                  onChange={setEndDate}
+                  placeholder="Tugash sanasi"
+                  format="YYYY-MM-DD"
+                />
+              </div>
+              <div className="text-sm text-gray-500">
+                {startDate && endDate && (
+                  <span>
+                    {dayjs(endDate).diff(dayjs(startDate), 'day')} kun
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>
