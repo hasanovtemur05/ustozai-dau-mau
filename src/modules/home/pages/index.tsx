@@ -80,33 +80,33 @@ const HomePage = () => {
 
   // Transform MRR data for chart
   const mrrChartData = useMemo(() => {
-  if (!mrrData) return [];
+    if (!mrrData) return [];
 
-  return Object.entries(mrrData).map(([date, value]: any) => ({
-    date,
+    return Object.entries(mrrData).map(([date, value]: any) => ({
+      date,
 
-    totalAmount:
-      value?.totalAmount
-        ? value.totalAmount / 100
-        : 0,
+      totalAmount:
+        value?.totalAmount
+          ? value.totalAmount / 100
+          : 0,
 
-    totalCount: value?.totalCount || 0,
+      totalCount: value?.totalCount || 0,
 
-    paymeAmount:
-      value?.PAYME?.reduce(
-        (sum: number, item: { amount: number; count: number }) =>
-          sum + (item.amount * item.count) / 100,
-        0
-      ) || 0,
+      paymeAmount:
+        value?.PAYME?.reduce(
+          (sum: number, item: { amount: number; count: number }) =>
+            sum + (item.amount * item.count) / 100,
+          0
+        ) || 0,
 
-    clickAmount:
-      value?.CLICK?.reduce(
-        (sum: number, item: { amount: number; count: number }) =>
-          sum + (item.amount * item.count) / 100,
-        0
-      ) || 0,
-  }));
-}, [mrrData]);
+      clickAmount:
+        value?.CLICK?.reduce(
+          (sum: number, item: { amount: number; count: number }) =>
+            sum + (item.amount * item.count) / 100,
+          0
+        ) || 0,
+    }));
+  }, [mrrData]);
 
 
   return (
@@ -227,8 +227,7 @@ const HomePage = () => {
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis
                     dataKey="label"
-                    tickFormatter={(date) => dayjs(date).format("MMM D")}
-                    angle={-45}
+                    // angle={}
                     textAnchor="end"
                     height={70}
                     tick={{ fontSize: 12, fill: '#6b7280' }}
