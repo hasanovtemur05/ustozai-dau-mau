@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import dayjs, { Dayjs } from "dayjs";
 import { subMonths } from "date-fns";
 import { DatePicker } from "antd";
@@ -30,6 +30,9 @@ import {
 const HomePage = () => {
   const [tablePage, setTablePage] = useState(1);
   const [tableLimit, setTableLimit] = useState(20);
+  
+  // Scroll uchun barcha yuklangan ma'lumotlarni saqlash
+  const [allTableData, setAllTableData] = useState<any[]>([]);
 
   // ===================== SORT STATE (optional) =====================
   const [sortBy, setSortBy] = useState<'streakCount' | 'launchCount'>('streakCount');
@@ -50,7 +53,6 @@ const HomePage = () => {
   );
 
   console.log(tableResponse, "table data");
-
 
   // DAU Stats - umumiy startDate va endDate ishlatadi
   const { data: dauStatsData, isLoading: dauLoading } = useGetDauGeneralStats(
@@ -73,6 +75,37 @@ const HomePage = () => {
   // ===================== TABLE =====================
   const tableData = tableResponse?.data?.data || [];
   const pagination = tableResponse?.data?.meta?.pagination || {};
+
+  // Yangi ma'lumotlar kelganda ularni qo'shish - optimized
+  useEffect(() => {
+    if (tableData.length > 0) {
+      if (tablePage === 1) {
+        // Birinchi sahifa bo'lsa, yangisini boshlash
+        setAllTableData(tableData);
+      } else {
+        // Keyingi sahifalar uchun append qilish
+        setAllTableData(prev => {
+          const existingIds = new Set(prev.map(item => item.id));
+          const newItems = tableData.filter((item: any) => !existingIds.has(item.id));
+          return newItems.length > 0 ? [...prev, ...newItems] : prev;
+        });
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tableData]);
+
+  // Sort yoki filter o'zgarganda ma'lumotlarni qayta yuklash - handler function
+  const handleSortChange = (newSortBy: 'streakCount' | 'launchCount') => {
+    setSortBy(newSortBy);
+    setTablePage(1);
+    setAllTableData([]);
+  };
+
+  const handleOrderChange = (newOrder: 'asc' | 'desc') => {
+    setOrder(newOrder);
+    setTablePage(1);
+    setAllTableData([]);
+  };
 
   // ===================== CHART DATA =====================
   const dauChartData = dauStatsData?.data?.data?.dauStats || [];
@@ -108,9 +141,8 @@ const HomePage = () => {
     }));
   }, [mrrData]);
 
-
   return (
-    <div className="p-10 space-y-10 bg-gray-50 min-h-screen ">
+    <div className="p-10 space-y-10 bg-gray-50 h-full ">
       {/* ===================== DATE FILTERS (Bitta umumiy) ===================== */}
       <div className="bg-white p-6 rounded-xl shadow-sm">
         <div className="grid grid-cols-2 gap-4">
@@ -227,7 +259,6 @@ const HomePage = () => {
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis
                     dataKey="label"
-                    // angle={}
                     textAnchor="end"
                     height={70}
                     tick={{ fontSize: 12, fill: '#6b7280' }}
@@ -354,7 +385,7 @@ const HomePage = () => {
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-[500px] flex items-center justify-center text-gray-400">
+            <div className="flex items-center justify-center text-gray-400">
               Ma'lumot mavjud emas
             </div>
           )}
@@ -362,7 +393,7 @@ const HomePage = () => {
       </div>
 
       {/* ===================== TABLE SECTION ===================== */}
-      <div className="bg-white p-6 rounded-xl shadow-lg">
+      <div className="bg-white p-6 rounded-xl shadow-lg ">
         <div className="flex items-center justify-between mb-4 border-b pb-2">
           <h3 className="text-lg font-semibold text-gray-700">
             Foydalanuvchi Statistikasi
@@ -372,7 +403,7 @@ const HomePage = () => {
           <div className="flex gap-2">
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'streakCount' | 'launchCount')}
+              onChange={(e) => handleSortChange(e.target.value as 'streakCount' | 'launchCount')}
               className="px-3 py-1 border rounded-lg text-sm"
             >
               <option value="streakCount">Streak Count</option>
@@ -380,7 +411,7 @@ const HomePage = () => {
             </select>
             <select
               value={order}
-              onChange={(e) => setOrder(e.target.value as 'asc' | 'desc')}
+              onChange={(e) => handleOrderChange(e.target.value as 'asc' | 'desc')}
               className="px-3 py-1 border rounded-lg text-sm"
             >
               <option value="desc">Kamayish</option>
@@ -389,20 +420,18 @@ const HomePage = () => {
           </div>
         </div>
 
-        {tableLoading ? (
+        {tableLoading && tablePage === 1 ? (
           <div className="h-[400px] flex items-center justify-center">
             <Loading />
           </div>
         ) : (
           <GlobalTable
             columns={columns(tablePage, tableLimit)}
-            data={tableData}
+            data={allTableData}
             pagination={{
-              current: pagination.pageNumber || 1,
-              pageSize: pagination.pageSize || 20,
+              current: tablePage,
+              pageSize: tableLimit,
               total: pagination.count || 0,
-              showSizeChanger: true,
-              pageSizeOptions: ["5", "10", "20", "30", "50"],
             }}
             onChange={({ current = 1, pageSize = 20 }) => {
               setTablePage(current);

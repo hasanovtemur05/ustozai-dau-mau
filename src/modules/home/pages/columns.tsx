@@ -25,12 +25,12 @@ export const columns = (pageNumber: number, pageSize: number): ColumnsType<UserD
       <span style={{ fontWeight: 'bold', color: count > 0 ? '#52c41a' : '#8c8c8c' }}>{count}</span>
     ),
   },
-  //  {
-  //   title: "Murojatlar Soni",
-  //   dataIndex: "referralCount",
-  //   render: (count: number) => (
-  //     <span style={{ fontWeight: 'bold', color: count > 0 ? '#52c41a' : '#8c8c8c' }}>{count}</span>
-  //   ),
-  // },
+   {
+    title: "Referral Count",
+    dataIndex: "referralCount",
+    render: (count: number) => (
+      <span style={{ fontWeight: 'bold', color: count > 0 ? '#52c41a' : '#8c8c8c' }}>{count}</span>
+    ),
+  },
   
 ];
