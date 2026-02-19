@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getDauWithUsers, getDauGeneralStats, getMrr } from "../service";
+import { getDauWithUsers, getDauGeneralStats, getMrr, getDauMouStatistics } from "../service";
 
 // ============================== USE GET DAU WITH USERS ==============================
 export function useGetDauData(
@@ -29,6 +29,16 @@ export function useGetMrr(startDate: string, endDate: string) {
   return useQuery({
     queryKey: ["mrrStats", startDate, endDate],
     queryFn: () => getMrr(startDate, endDate),
+    enabled: !!startDate && !!endDate,
+  });
+}
+
+
+// =====================================  USE GET DAU/MAU VIEWS DAILY ================================================
+export function useGetViewsDaily(startDate: string, endDate: string) {
+  return useQuery({
+    queryKey: ["viewsStats", startDate, endDate],
+    queryFn: () => getDauMouStatistics(startDate, endDate),
     enabled: !!startDate && !!endDate,
   });
 }

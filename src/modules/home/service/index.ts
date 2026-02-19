@@ -28,3 +28,11 @@ export const getMrr = async ( startDate:string, endDate: string) => {
   const response = await axiosInstance.get(`statistics/transactions/by-provider-date?startDate=${startDate}&endDate=${endDate}`)
   return response?.data?.data
 }
+
+
+
+// =============================================  GET DAU/MAU  =============================================
+export const getDauMouStatistics = async (startDate: string, endDate: string) => {
+  const response = await axiosInstance.get(`statistics/views/daily?startDate=${startDate}&endDate=${endDate}`)
+  return response?.data
+}
