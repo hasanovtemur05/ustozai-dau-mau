@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import dayjs, { Dayjs } from "dayjs";
 import { subMonths } from "date-fns";
 import { DatePicker } from "antd";
@@ -39,15 +39,21 @@ const HomePage = () => {
   const [startDate, setStartDate] = useState<Dayjs | null>(dayjs(subMonths(new Date(), 1)));
   const [endDate, setEndDate] = useState<Dayjs | null>(dayjs());
 
-  // Tab state - localStorage bilan (refresh'dan keyin ham saqlanadi)
   const [activeTab, setActiveTab] = useState<1 | 2>(() => {
     const saved = localStorage.getItem("dauActiveTab");
     return saved === "2" ? 2 : 1;
   });
 
+  const tabTriggerRef = useRef<HTMLButtonElement>(null);
+
   const handleTabChange = (tab: 1 | 2) => {
     setActiveTab(tab);
     localStorage.setItem("dauActiveTab", String(tab));
+  };
+
+  const handleHiddenToggle = () => {
+    const newTab = activeTab === 1 ? 2 : 1;
+    handleTabChange(newTab);
   };
 
   // ===================== API CALLS =====================
@@ -135,7 +141,6 @@ const HomePage = () => {
     }));
   }, [mrrData]);
 
-  // Active tab ga qarab kerakli data va loading
   const activeDauData = activeTab === 1 ? dauChartData : dauStatis;
   const activeDauLoading = activeTab === 1 ? viewsLoading : dauLoading;
   const activeDauDataKey = activeTab === 1 ? "date" : "label";
@@ -143,6 +148,7 @@ const HomePage = () => {
 
   return (
     <div className="p-10 space-y-10 bg-gray-50 h-full">
+
       {/* ===================== DATE FILTERS ===================== */}
       <div className="bg-white p-6 rounded-xl shadow-sm">
         <div className="grid grid-cols-2 gap-4">
@@ -175,35 +181,11 @@ const HomePage = () => {
         </div>
       </div>
 
-      {/* ===================== TAB BUTTONS ===================== */}
-      <div className="w-full h-8 flex items-center justify-end gap-[20px]">
-        <button
-          onClick={() => handleTabChange(1)}
-          className={`text-lg font-semibold px-[30px] py-[8px] rounded-lg transition-colors ${
-            activeTab === 1
-              ? "bg-sky-600 text-white"
-              : "bg-gray-200 text-gray-600 hover:bg-gray-300"
-          }`}
-        >
-          Tab 1
-        </button>
-        <button
-          onClick={() => handleTabChange(2)}
-          className={`text-lg font-semibold px-[30px] py-[8px] rounded-lg transition-colors ${
-            activeTab === 2
-              ? "bg-sky-600 text-white"
-              : "bg-gray-200 text-gray-600 hover:bg-gray-300"
-          }`}
-        >
-          Tab 2
-        </button>
-      </div>
-
       {/* ===================== CHART SECTION ===================== */}
       <div className="flex flex-col gap-6">
-        {/* DAU + MAU */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* DAU Chart - Tab ga qarab almashadi */}
+
+          {/* DAU Chart */}
           <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow">
             <h3 className="text-lg font-semibold mb-4 text-gray-700 border-b pb-2">
               Daily Active Users (DAU) — {activeTab === 1 ? "Views" : "Stats"}
@@ -242,11 +224,7 @@ const HomePage = () => {
                       boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                     }}
                   />
-                  <Legend
-                    verticalAlign="top"
-                    height={36}
-                    wrapperStyle={{ paddingBottom: '10px' }}
-                  />
+                  <Legend verticalAlign="top" height={36} wrapperStyle={{ paddingBottom: '10px' }} />
                   <Bar
                     dataKey="count"
                     fill={activeDauColor}
@@ -300,11 +278,7 @@ const HomePage = () => {
                       boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                     }}
                   />
-                  <Legend
-                    verticalAlign="top"
-                    height={36}
-                    wrapperStyle={{ paddingBottom: '10px' }}
-                  />
+                  <Legend verticalAlign="top" height={36} wrapperStyle={{ paddingBottom: '10px' }} />
                   <Bar
                     dataKey="count"
                     fill="#3b82f6"
@@ -322,7 +296,7 @@ const HomePage = () => {
           </div>
         </div>
 
-        {/* ===================== MRR Area Chart ===================== */}
+        {/* MRR Chart */}
         <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow">
           <h3 className="text-lg font-semibold mb-4 text-gray-700 border-b pb-2">
             Monthly Recurring Revenue (MRR)
@@ -358,13 +332,8 @@ const HomePage = () => {
                 />
                 <YAxis tick={{ fontSize: 12, fill: '#6b7280' }} />
                 <Tooltip
-                  formatter={(
-                    value: number | undefined,
-                    name: string | undefined
-                  ): [string, string] => [
-                    value !== undefined
-                      ? new Intl.NumberFormat("uz-UZ").format(value)
-                      : "-",
+                  formatter={(value: number | undefined, name: string | undefined): [string, string] => [
+                    value !== undefined ? new Intl.NumberFormat("uz-UZ").format(value) : "-",
                     name ?? "-",
                   ]}
                   contentStyle={{
@@ -374,11 +343,7 @@ const HomePage = () => {
                     boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                   }}
                 />
-                <Legend
-                  verticalAlign="top"
-                  height={36}
-                  wrapperStyle={{ paddingBottom: '10px' }}
-                />
+                <Legend verticalAlign="top" height={36} wrapperStyle={{ paddingBottom: '10px' }} />
                 <Area
                   type="monotone"
                   dataKey="paymeAmount"
@@ -461,7 +426,32 @@ const HomePage = () => {
             }}
           />
         )}
+
       </div>
+
+
+      <div className=" flex justify-end">
+        <button
+          ref={tabTriggerRef}
+          id="tab-toggle-trigger"
+          onClick={handleHiddenToggle}
+          style={{
+            width: '100px',
+            height: '40px',
+            borderRadius: '12px',
+            backgroundColor: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            marginTop: '8px',
+            transition: 'background-color 0.3s',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.15)')}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+          aria-label="Toggle tab"
+          tabIndex={-1}
+        />
+      </div>
+
     </div>
   );
 };
