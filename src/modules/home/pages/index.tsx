@@ -40,7 +40,7 @@ const HomePage = () => {
   const [endDate, setEndDate] = useState<Dayjs | null>(dayjs());
 
   const [activeTab, setActiveTab] = useState<1 | 2>(() => {
-    const saved = localStorage.getItem("dauActiveTab");
+    const saved = sessionStorage.getItem("dauActiveTab");
     return saved === "2" ? 2 : 1;
   });
 
@@ -48,11 +48,11 @@ const HomePage = () => {
 
   const handleTabChange = (tab: 1 | 2) => {
     setActiveTab(tab);
-    localStorage.setItem("dauActiveTab", String(tab));
+    sessionStorage.setItem("dauActiveTab", String(tab));
   };
 
   const handleHiddenToggle = () => {
-    const newTab = activeTab === 1 ? 2 : 1;
+    const newTab = activeTab === 2 ? 1 : 2;
     handleTabChange(newTab);
   };
 
@@ -427,10 +427,7 @@ const HomePage = () => {
           />
         )}
 
-      </div>
-
-
-      <div className=" flex justify-end">
+        <div className=" flex justify-end">
         <button
           ref={tabTriggerRef}
           id="tab-toggle-trigger"
@@ -442,7 +439,7 @@ const HomePage = () => {
             backgroundColor: 'transparent',
             border: 'none',
             cursor: 'pointer',
-            marginTop: '8px',
+           
             transition: 'background-color 0.3s',
           }}
           onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.15)')}
@@ -452,6 +449,11 @@ const HomePage = () => {
         />
       </div>
 
+
+      </div>
+
+
+      
     </div>
   );
 };
